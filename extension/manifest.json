@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Ozolext",
+  "version": "1.0",
+  "description": "Фиксированная кнопка для быстрого подтверждения выдачи в Turbo PVZ Ozon",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["*://turbo-pvz.ozon.ru/orders/session/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "512": "icon512.png"
+  }
+}
