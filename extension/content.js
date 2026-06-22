@@ -1,40 +1,48 @@
 (function() {
+  'use strict';
+
   // --- Конфигурация ---
   const TARGET_SELECTOR = 'button[data-testid="giveOutActionButton"]';
   const FLOATING_BTN_ID = 'ozolext-floating-btn';
+  const CHECK_INTERVAL_MS = 1000; // Проверяем каждую секунду
+
+  // --- Логирование ---
+  console.log('[Ozolext] active');
+
+  // --- Переменные состояния ---
+  let targetButton = null;
+  let isActive = false;
 
   // --- Функция поиска целевой кнопки ---
   function findTargetButton() {
     return document.querySelector(TARGET_SELECTOR);
   }
 
-  // --- Функция клика по целевой кнопке (с ожиданием) ---
-  function clickGiveoutButton() {
-    return new Promise((resolve) => {
-      // Проверяем сразу
-      let target = findTargetButton();
-      if (target) {
-        target.click();
-        resolve(true);
-        return;
-      }
+  // --- Функция обновления состояния кнопки ---
+  function updateButtonState() {
+    targetButton = findTargetButton();
+    isActive = !!targetButton;
 
-      // Если кнопки нет – ждём её появления (максимум 10 секунд)
-      let attempts = 0;
-      const maxAttempts = 20; // 20 * 500ms = 10 секунд
-      const interval = setInterval(() => {
-        attempts++;
-        target = findTargetButton();
-        if (target) {
-          clearInterval(interval);
-          target.click();
-          resolve(true);
-        } else if (attempts >= maxAttempts) {
-          clearInterval(interval);
-          resolve(false);
-        }
-      }, 500);
-    });
+    const btn = document.getElementById(FLOATING_BTN_ID);
+    if (!btn) return;
+
+    if (isActive) {
+      // Активная кнопка
+      btn.style.backgroundColor = '#005BFF';
+      btn.style.color = '#fff';
+      btn.style.cursor = 'pointer';
+      btn.style.opacity = '1';
+      btn.textContent = 'Выдать';
+      btn.disabled = false;
+    } else {
+      // Неактивная (серая) кнопка
+      btn.style.backgroundColor = '#6c757d';
+      btn.style.color = '#adb5bd';
+      btn.style.cursor = 'not-allowed';
+      btn.style.opacity = '0.6';
+      btn.textContent = '⏳ Ожидание...';
+      btn.disabled = true;
+    }
   }
 
   // --- Создание плавающей кнопки ---
@@ -44,102 +52,141 @@
 
     const btn = document.createElement('button');
     btn.id = FLOATING_BTN_ID;
-    btn.textContent = 'Выдать';
+    btn.textContent = '⏳ Ожидание...';
+    btn.disabled = true;
     
-    // Стили
+    // Базовые стили (серые, пока не активируется)
     Object.assign(btn.style, {
       position: 'fixed',
       bottom: '20px',
       right: '20px',
       zIndex: '9999',
       padding: '12px 24px',
-      backgroundColor: '#005BFF',
-      color: '#fff',
+      backgroundColor: '#6c757d',
+      color: '#adb5bd',
       border: 'none',
       borderRadius: '40px',
-      boxShadow: '0 4px 12px rgba(0,91,255,0.4)',
-      cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      cursor: 'not-allowed',
       fontSize: '16px',
       fontWeight: '600',
-      transition: 'transform 0.15s, box-shadow 0.15s, background-color 0.3s',
+      transition: 'all 0.3s ease',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      opacity: '0.6',
     });
 
-    // Эффекты при наведении
+    // Обработчик клика (будет работать только когда активна)
+    btn.addEventListener('click', () => {
+      if (!isActive || !targetButton) {
+        // Если кнопка неактивна, ничего не делаем (но можно показать подсказку)
+        return;
+      }
+
+      // Эмулируем клик по целевой кнопке
+      targetButton.click();
+
+      // Визуальная обратная связь
+      btn.textContent = '✅ Готово!';
+      btn.style.backgroundColor = '#28a745';
+      btn.style.color = '#fff';
+      setTimeout(() => {
+        if (isActive && targetButton) {
+          btn.textContent = 'Выдать';
+          btn.style.backgroundColor = '#005BFF';
+          btn.style.color = '#fff';
+        } else {
+          updateButtonState();
+        }
+      }, 800);
+    });
+
+    // Эффекты при наведении (только если активна)
     btn.addEventListener('mouseenter', () => {
-      btn.style.transform = 'scale(1.04)';
-      btn.style.boxShadow = '0 6px 16px rgba(0,91,255,0.5)';
+      if (isActive) {
+        btn.style.transform = 'scale(1.04)';
+        btn.style.boxShadow = '0 6px 16px rgba(0,91,255,0.5)';
+      }
     });
     btn.addEventListener('mouseleave', () => {
       btn.style.transform = 'scale(1)';
-      btn.style.boxShadow = '0 4px 12px rgba(0,91,255,0.4)';
-    });
-
-    // Обработчик клика
-    btn.addEventListener('click', async () => {
-      // Меняем состояние кнопки
-      const originalText = btn.textContent;
-      btn.textContent = '⏳ Ищем...';
-      btn.style.backgroundColor = '#6c757d';
-      btn.style.cursor = 'wait';
-      btn.disabled = true;
-
-      const success = await clickGiveoutButton();
-
-      // Восстанавливаем состояние
-      btn.disabled = false;
-      btn.style.cursor = 'pointer';
-      
-      if (success) {
-        btn.textContent = '✅ Готово!';
-        btn.style.backgroundColor = '#28a745';
-        setTimeout(() => {
-          btn.textContent = originalText;
-          btn.style.backgroundColor = '#005BFF';
-        }, 1200);
+      if (isActive) {
+        btn.style.boxShadow = '0 4px 12px rgba(0,91,255,0.4)';
       } else {
-        btn.textContent = '❌ Не найдено';
-        btn.style.backgroundColor = '#dc3545';
-        setTimeout(() => {
-          btn.textContent = originalText;
-          btn.style.backgroundColor = '#005BFF';
-        }, 1500);
+        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
       }
     });
 
     document.body.appendChild(btn);
+    
+    // Первоначальное обновление состояния
+    updateButtonState();
   }
 
-  // --- Создание плавающей кнопки при загрузке ---
-  function init() {
-    if (document.body) {
-      createFloatingButton();
-    } else {
-      document.addEventListener('DOMContentLoaded', createFloatingButton);
-    }
+  // --- Периодическая проверка ---
+  function startPeriodicCheck() {
+    setInterval(() => {
+      const oldTarget = targetButton;
+      const newTarget = findTargetButton();
+      
+      // Если состояние изменилось — обновляем кнопку
+      if (oldTarget !== newTarget || (newTarget && !isActive)) {
+        targetButton = newTarget;
+        updateButtonState();
+        
+        // Логируем изменения (для отладки)
+        if (newTarget && !isActive) {
+          console.log('[Ozolext] Целевая кнопка найдена! 🎯');
+        } else if (!newTarget && isActive) {
+          console.log('[Ozolext] Целевая кнопка пропала');
+        }
+      }
+    }, CHECK_INTERVAL_MS);
   }
 
   // --- Слушатель сообщений из popup ---
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'clickGiveout') {
-      clickGiveoutButton().then((success) => {
-        sendResponse({ success });
-      });
-      return true; // Асинхронный ответ
+      if (isActive && targetButton) {
+        targetButton.click();
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, reason: 'Кнопка не активна' });
+      }
+      return true;
     }
   });
 
-  // --- Запуск ---
-  init();
-
-  // --- Дополнительно: следим за появлением body (на случай, если скрипт загружен рано) ---
-  if (document.readyState === 'loading') {
-    document.addEventListener('readystatechange', () => {
-      if (document.readyState === 'interactive' || document.readyState === 'complete') {
-        createFloatingButton();
-      }
-    });
+  // --- Инициализация ---
+  function init() {
+    if (document.body) {
+      createFloatingButton();
+      startPeriodicCheck();
+    } else {
+      // Если body ещё нет, ждём его появления
+      const observer = new MutationObserver(() => {
+        if (document.body) {
+          observer.disconnect();
+          createFloatingButton();
+          startPeriodicCheck();
+        }
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
   }
 
-  console.log('[Ozolext] Content script загружен и ожидает появления кнопки.');
+  // --- Запуск ---
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Дополнительная страховка: если кнопка не создалась, пробуем ещё раз
+  setTimeout(() => {
+    if (!document.getElementById(FLOATING_BTN_ID)) {
+      createFloatingButton();
+      startPeriodicCheck();
+    }
+  }, 2000);
+
 })();
