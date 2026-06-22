@@ -1,4 +1,5 @@
 (function() {
+    console.log('Ozolext loaded');
   // Создаём плавающую кнопку
   function createButton() {
     const btn = document.createElement('button');
