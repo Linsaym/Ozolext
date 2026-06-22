@@ -28,7 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.sendMessage(tab.id, {
           action: 'toggleFloatingButton',
           enabled: enabled
-        }).catch(() => {});
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn('[Ozolext] Ошибка отправки toggle:', chrome.runtime.lastError.message);
+          } else if (response && response.success) {
+            console.log('[Ozolext] Состояние кнопки обновлено');
+          }
+        });
       }
     });
   }
@@ -83,7 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const tab = tabs[0];
       if (tab && tab.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'clickGiveout' }, (response) => {
-          if (!chrome.runtime.lastError && response && response.success) {
+          if (chrome.runtime.lastError) {
+            console.warn('[Ozolext] Ошибка клика:', chrome.runtime.lastError.message);
+            return;
+          }
+          if (response && response.success) {
             triggerBtn.textContent = '✅ Готово!';
             setTimeout(() => {
               triggerBtn.textContent = '▶ Выдать заказ';

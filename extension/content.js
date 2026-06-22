@@ -21,12 +21,13 @@
     const btn = document.getElementById(FLOATING_BTN_ID);
     if (!btn) return;
 
-    // Если кнопка отключена — скрываем
+    // Если кнопка отключена — скрываем и выходим
     if (!isFloatingEnabled) {
       btn.style.display = 'none';
       return;
     }
 
+    // Иначе показываем и обновляем внешний вид
     btn.style.display = 'block';
     targetButton = findTargetButton();
     isActive = !!targetButton;
@@ -109,10 +110,7 @@
 
     document.body.appendChild(btn);
 
-    if (!isFloatingEnabled) {
-      btn.style.display = 'none';
-    }
-
+    // Применяем начальное состояние (может быть скрыта)
     updateButtonState();
   }
 
@@ -122,7 +120,6 @@
 
     observer = new MutationObserver(() => {
       const currentTarget = findTargetButton();
-      // Обновляем состояние только если изменилось
       if (currentTarget !== targetButton) {
         targetButton = currentTarget;
         updateButtonState();
@@ -140,7 +137,7 @@
       attributes: false,
     });
 
-    // Проверяем сразу
+    // Первичная проверка
     targetButton = findTargetButton();
     updateButtonState();
     if (targetButton) {
@@ -182,21 +179,28 @@
     }
   });
 
-  // --- Инициализация ---
+  // --- Инициализация с чтением состояния из storage ---
   function init() {
-    if (document.body) {
-      createFloatingButton();
-      startObserver();
-    } else {
-      const readyObserver = new MutationObserver(() => {
-        if (document.body) {
-          readyObserver.disconnect();
-          createFloatingButton();
-          startObserver();
-        }
-      });
-      readyObserver.observe(document.documentElement, { childList: true, subtree: true });
-    }
+    // Сначала читаем сохранённое состояние
+    chrome.storage.local.get(['floatingButtonEnabled'], (result) => {
+      if (result.floatingButtonEnabled !== undefined) {
+        isFloatingEnabled = result.floatingButtonEnabled;
+      }
+      // Теперь создаём кнопку и запускаем observer
+      if (document.body) {
+        createFloatingButton();
+        startObserver();
+      } else {
+        const readyObserver = new MutationObserver(() => {
+          if (document.body) {
+            readyObserver.disconnect();
+            createFloatingButton();
+            startObserver();
+          }
+        });
+        readyObserver.observe(document.documentElement, { childList: true, subtree: true });
+      }
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -208,8 +212,14 @@
   // Страховка
   setTimeout(() => {
     if (!document.getElementById(FLOATING_BTN_ID)) {
-      createFloatingButton();
-      startObserver();
+      // Если кнопка не создалась, пробуем ещё раз
+      chrome.storage.local.get(['floatingButtonEnabled'], (result) => {
+        if (result.floatingButtonEnabled !== undefined) {
+          isFloatingEnabled = result.floatingButtonEnabled;
+        }
+        createFloatingButton();
+        startObserver();
+      });
     }
   }, 2000);
 })();
