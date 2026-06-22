@@ -4,7 +4,7 @@
   // --- Конфигурация ---
   const TARGET_SELECTOR = 'button[data-testid="giveOutActionButton"]';
   const FLOATING_BTN_ID = 'ozolext-floating-btn';
-  const CHECK_INTERVAL_MS = 1000; // Проверяем каждую секунду
+  const CHECK_INTERVAL_MS = 200; // Проверяем каждую секунду
 
   // --- Логирование ---
   console.log('[Ozolext] active');
